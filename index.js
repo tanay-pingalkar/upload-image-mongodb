@@ -9,9 +9,8 @@ const fs = require("fs");
 const { promisify } = require("util");
 const pipeline = promisify(require("stream").pipeline);
 
+const path = require("path");
 
-
-app.get('/',(req,res)=>res.send('lala'))
 app.listen(PORT,()=>console.log(`listening on port ${PORT}`));
 app.use(cors());
 app.use((req,res, next)=>{
@@ -35,7 +34,7 @@ const multer = require("multer");
 
 var upload = multer();
 
-app.post("/upload", upload.single("file"),  function(req, res, next) {
+app.post("/upload", upload.single("file"), async function(req, res, next) {
     const {
       file,
       body: { name }
@@ -43,12 +42,29 @@ app.post("/upload", upload.single("file"),  function(req, res, next) {
     var new_img = new Img;
     new_img.img.data = fs.readFileSync(req.file.path)
     new_img.img.contentType = 'image/jpeg';
-    new_img.save();
+    const rand=Math.floor(Math.random()*1000000);
+    const fileName = rand + file.detectedFileExtension;
+    new_img.url=`http://localhost:9000/${fileName}`
+    new_img.save()
+    
+      
+    await pipeline(
+      file.stream,
+      fs.createWriteStream(`${__dirname}/public/${fileName}`)
+    );
+    res.send('message is saved, you get fetch it now')
+
 });
 
 
 app.get("/get",(req,res)=>{
     Img.find({},(err,data)=>{
         res.send(data);
-    })
+    });
 })
+app.get("/image", (req, res) => {
+    res.sendFile(path.join(__dirname, "./public/lala.jpg"));
+  });
+
+
+app.use(express.static("public"));
